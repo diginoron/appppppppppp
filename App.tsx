@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react'; // Removed useEffect as it's no longer needed for initial API key check
 import { generateThesisTopics } from './services/geminiService';
 import { ThesisTopic } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -10,36 +10,16 @@ const App: React.FC = () => {
   const [topics, setTopics] = useState<ThesisTopic[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
-  const [showApiKeySelectionPrompt, setShowApiKeySelectionPrompt] = useState<boolean>(true);
-
-  // Check for API key on component mount
-  useEffect(() => {
-    const checkApiKey = async () => {
-      // The `window.aistudio` object and its methods (`hasSelectedApiKey`, `openSelectKey`)
-      // are assumed to be globally available and typed by the environment,
-      // as per the @google/genai coding guidelines.
-      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-        const keySelected = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(keySelected);
-        setShowApiKeySelectionPrompt(!keySelected);
-      } else {
-        // Fallback for environments where aistudio might not be available
-        setHasApiKey(!!process.env.API_KEY);
-        setShowApiKeySelectionPrompt(!process.env.API_KEY);
-      }
-    };
-    checkApiKey();
-  }, []);
+  // Assume API_KEY is available via process.env initially.
+  // We only show the prompt if an API call fails with a key-related error.
+  const [hasApiKey, setHasApiKey] = useState<boolean>(true);
+  const [showApiKeySelectionPrompt, setShowApiKeySelectionPrompt] = useState<boolean>(false);
 
   const handleKeywordsChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setKeywords(e.target.value);
   }, []);
 
   const handleSelectApiKey = useCallback(async () => {
-    // The `window.aistudio` object and its methods (`hasSelectedApiKey`, `openSelectKey`)
-    // are assumed to be globally available and typed by the environment,
-    // as per the @google/genai coding guidelines.
     if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
       try {
         await window.aistudio.openSelectKey();
@@ -59,11 +39,8 @@ const App: React.FC = () => {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!hasApiKey) {
-      setError('لطفاً قبل از تولید موضوعات، یک کلید API معتبر انتخاب کنید.');
-      setShowApiKeySelectionPrompt(true);
-      return;
-    }
+    // No initial check for hasApiKey here; we attempt to use process.env.API_KEY.
+    // Error handling will catch if it's invalid/missing and then prompt.
 
     if (!keywords.trim()) {
       setError('لطفا حداقل یک کلیدواژه وارد کنید.');
@@ -80,19 +57,19 @@ const App: React.FC = () => {
       setTopics(response.topics);
     } catch (err: any) {
       console.error('Failed to fetch topics:', err);
-      // Check for specific error message to re-prompt API key selection
       const errorMessage = err.message || '';
+      // Check for specific error message to re-prompt API key selection
       if (errorMessage.includes('Rpc failed due to xhr error') || errorMessage.includes('Requested entity was not found.')) {
         setError('خطا در ارتباط با هوش مصنوعی. لطفاً کلید API خود را بررسی و مجدداً انتخاب کنید.');
-        setHasApiKey(false);
-        setShowApiKeySelectionPrompt(true);
+        setHasApiKey(false); // Mark API key as invalid
+        setShowApiKeySelectionPrompt(true); // Show the prompt
       } else {
         setError(errorMessage || 'خطا در دریافت موضوعات. لطفاً دوباره تلاش کنید.');
       }
     } finally {
       setLoading(false);
     }
-  }, [keywords, hasApiKey]);
+  }, [keywords]); // hasApiKey is no longer a direct dependency here for submission logic
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 font-sans text-right flex flex-col items-center">
@@ -110,7 +87,7 @@ const App: React.FC = () => {
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6" role="alert">
             <p className="font-bold">کلید API نیاز است!</p>
             <p className="mt-2">
-              برای استفاده از این برنامه، باید یک کلید API گوگل جیمینی را انتخاب کنید. لطفاً روی دکمه زیر کلیک کنید.
+              برای استفاده از این برنامه، یک کلید API گوگل جیمینی نیاز است. لطفاً روی دکمه زیر کلیک کنید.
             </p>
             <p className="mt-2 text-sm">
               برای اطلاعات بیشتر در مورد صورت‌حساب، به{' '}
@@ -145,7 +122,7 @@ const App: React.FC = () => {
               placeholder={DEFAULT_KEYWORDS_PLACEHOLDER}
               value={keywords}
               onChange={handleKeywordsChange}
-              disabled={loading || !hasApiKey}
+              disabled={loading} // Only disable based on loading state, not initial API key presence
             ></textarea>
             <p className="mt-2 text-sm text-gray-500">
               چندین کلیدواژه مرتبط با حوزه تحقیقاتی خود را با کاما از هم جدا کنید.
@@ -155,7 +132,7 @@ const App: React.FC = () => {
           <button
             type="submit"
             className="w-full flex justify-center items-center px-6 py-3 border border-transparent text-base font-bold rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading || !keywords.trim() || !hasApiKey}
+            disabled={loading || !keywords.trim()} // Disable if loading or keywords are empty
           >
             {loading ? (
               <>
