@@ -1,0 +1,5 @@
+{
+  "name": "Thesis Topic Suggester",
+  "description": "An AI-powered application that suggests thesis topics based on user-provided keywords, utilizing the Google Gemini API for intelligent generation.",
+  "requestFramePermissions": []
+}

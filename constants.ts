@@ -1,0 +1,3 @@
+export const GEMINI_MODEL_NAME = 'gemini-2.5-pro'; // Using pro for complex reasoning
+export const DEFAULT_KEYWORDS_PLACEHOLDER = 'Artificial Intelligence, Machine Learning, Healthcare, Ethics';
+export const GENERATION_PROMPT = (keywords: string) => `Generate 5 unique and compelling academic thesis topics, each with a brief description, relevant keywords, and 2-3 potential research questions, based on the following general keywords: "${keywords}". Ensure the output is a JSON array of objects, strictly following the ApiResponse interface where 'topics' is an array of 'ThesisTopic' objects. Avoid any conversational text outside the JSON.`;
